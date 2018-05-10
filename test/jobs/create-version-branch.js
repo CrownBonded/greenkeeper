@@ -9,7 +9,7 @@ nock.enableNetConnect('localhost')
 
 jest.setTimeout(10000)
 
-describe('create version brach', () => {
+describe('create version branch', () => {
   beforeEach(() => {
     delete process.env.IS_ENTERPRISE
     cleanCache('../../lib/env')
@@ -571,6 +571,11 @@ describe('create version brach', () => {
       .get('/repos/finnp/test2')
       .reply(200, {
         default_branch: 'master'
+      })
+      .get('/repos/finnp/test2/pulls/5')
+      .reply(200, {
+        state: 'open',
+        merged: false
       })
       .post('/repos/finnp/test2/issues/5/comments')
       .reply(201, () => {
