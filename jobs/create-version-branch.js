@@ -138,14 +138,7 @@ module.exports = async function (
     return parsed.toString()
   }
 
-  const openPR = _.get(
-    await repositories.query('pr_open_by_dependency', {
-      key: [repositoryId, dependency],
-      include_docs: true
-    }),
-    'rows[0].doc'
-  )
-  log.info('database: found open PR for this dependency', {openPR})
+  const openPR = await findOpenPR()
 
   const commitMessageKey = !satisfies && type === 'dependencies'
     ? 'dependencyUpdate'
@@ -308,6 +301,29 @@ module.exports = async function (
       owner,
       repo
     }))
+  }
+
+  async function findOpenPR () {
+    const openPR = _.get(
+      await repositories.query('pr_open_by_dependency', {
+        key: [repositoryId, dependency],
+        include_docs: true
+      }),
+      'rows[0].doc'
+    )
+
+    if (!openPR) return false
+    log.info('database: found open PR for this dependency', {openPR})
+
+    const pr = await ghqueue.read(github => github.pullRequests.get({
+      owner,
+      repo,
+      number: openPR.number
+    }))
+    if (pr.state === 'open') return openPR
+
+    await upsert(repositories, openPR._id, _.pick(pr, ['state', 'merged']))
+    return false
   }
 }
 
